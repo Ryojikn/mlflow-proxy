@@ -1,0 +1,71 @@
+/* Custom styles for MLflow Proxy Dashboard */
+
+.card {
+    border-radius: 0.5rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.card-header {
+    border-top-left-radius: 0.5rem;
+    border-top-right-radius: 0.5rem;
+}
+
+.text-truncate {
+    max-width: 300px;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+/* Animation for refresh button */
+#refresh-btn:active i {
+    animation: spin 0.5s ease-in-out;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Better table styling */
+.table {
+    font-size: 0.9rem;
+}
+
+.table th {
+    font-weight: 600;
+    border-top: none;
+}
+
+/* Make table row hoverable */
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+}
+
+/* Status badges */
+.badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.35em 0.65em;
+}
+
+/* Chart containers */
+canvas {
+    width: 100% !important;
+    height: 250px !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .card-title {
+        font-size: 1.25rem;
+    }
+    
+    .table {
+        font-size: 0.8rem;
+    }
+    
+    .text-truncate {
+        max-width: 150px;
+    }
+}

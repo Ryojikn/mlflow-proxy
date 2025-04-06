@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html data-bs-theme="dark">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MLflow Proxy Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Chart.js for statistics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-exchange-alt me-2"></i>
+                MLflow Proxy
+            </a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="mb-0">Proxy Status</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>MLflow Server:</strong> <span id="mlflow-server">{{ mlflow_server }}</span></p>
+                                <p><strong>Status:</strong> <span class="badge bg-success"><i class="fas fa-circle me-1"></i> Active</span></p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Total Requests:</strong> <span id="total-requests">{{ stats.requests }}</span></p>
+                                <p><strong>Errors:</strong> <span id="total-errors">{{ stats.errors }}</span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h4 class="mb-0">Request Types</h4>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="requestTypesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h4 class="mb-0">Response Status Codes</h4>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="statusCodesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">Recent Requests</h4>
+                        <button class="btn btn-sm btn-outline-secondary" id="refresh-btn">
+                            <i class="fas fa-sync-alt me-1"></i> Refresh
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Method</th>
+                                        <th>Path</th>
+                                        <th>Type</th>
+                                        <th>Status</th>
+                                        <th>Duration (s)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="requests-table">
+                                    {% for req in stats.last_requests %}
+                                    <tr>
+                                        <td>{{ req.timestamp }}</td>
+                                        <td><span class="badge 
+                                            {% if req.method == 'GET' %}bg-info{% elif req.method == 'POST' %}bg-success
+                                            {% elif req.method == 'PUT' or req.method == 'PATCH' %}bg-warning
+                                            {% elif req.method == 'DELETE' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                            {{ req.method }}
+                                        </span></td>
+                                        <td class="text-truncate" style="max-width: 250px;" title="{{ req.path }}">{{ req.path }}</td>
+                                        <td>{{ req.type }}</td>
+                                        <td><span class="badge 
+                                            {% if req.status_code < 300 %}bg-success
+                                            {% elif req.status_code < 400 %}bg-info
+                                            {% elif req.status_code < 500 %}bg-warning
+                                            {% else %}bg-danger{% endif %}">
+                                            {{ req.status_code }}
+                                        </span></td>
+                                        <td>{{ req.duration }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-dark text-light py-3 mt-5">
+        <div class="container text-center">
+            <p class="mb-0">MLflow Proxy Server &copy; 2023</p>
+        </div>
+    </footer>
+
+    <script>
+        // Function to refresh statistics from the server
+        function refreshStats() {
+            fetch('/api/stats')
+                .then(response => response.json())
+                .then(data => {
+                    // Update basic stats
+                    document.getElementById('total-requests').textContent = data.requests;
+                    document.getElementById('total-errors').textContent = data.errors;
+                    
+                    // Update requests table
+                    const tableBody = document.getElementById('requests-table');
+                    tableBody.innerHTML = '';
+                    
+                    data.last_requests.forEach(req => {
+                        const methodClass = req.method === 'GET' ? 'bg-info' : 
+                                           req.method === 'POST' ? 'bg-success' :
+                                           (req.method === 'PUT' || req.method === 'PATCH') ? 'bg-warning' :
+                                           req.method === 'DELETE' ? 'bg-danger' : 'bg-secondary';
+                        
+                        const statusClass = req.status_code < 300 ? 'bg-success' :
+                                          req.status_code < 400 ? 'bg-info' :
+                                          req.status_code < 500 ? 'bg-warning' : 'bg-danger';
+                        
+                        const row = `
+                            <tr>
+                                <td>${req.timestamp}</td>
+                                <td><span class="badge ${methodClass}">${req.method}</span></td>
+                                <td class="text-truncate" style="max-width: 250px;" title="${req.path}">${req.path}</td>
+                                <td>${req.type}</td>
+                                <td><span class="badge ${statusClass}">${req.status_code}</span></td>
+                                <td>${req.duration}</td>
+                            </tr>
+                        `;
+                        tableBody.innerHTML += row;
+                    });
+                    
+                    // Update charts
+                    updateCharts(data);
+                })
+                .catch(error => console.error('Error refreshing stats:', error));
+        }
+        
+        // Initialize charts
+        let requestTypesChart, statusCodesChart;
+        
+        function initCharts() {
+            // Request Types Chart
+            const requestTypesCtx = document.getElementById('requestTypesChart').getContext('2d');
+            requestTypesChart = new Chart(requestTypesCtx, {
+                type: 'pie',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        backgroundColor: [
+                            '#3498db', '#2ecc71', '#e74c3c', '#f39c12', '#9b59b6',
+                            '#1abc9c', '#d35400', '#34495e', '#16a085', '#c0392b'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        }
+                    }
+                }
+            });
+            
+            // Status Codes Chart
+            const statusCodesCtx = document.getElementById('statusCodesChart').getContext('2d');
+            statusCodesChart = new Chart(statusCodesCtx, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Response Status Codes',
+                        data: [],
+                        backgroundColor: [],
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function updateCharts(data) {
+            // Update Request Types Chart
+            const requestTypes = data.request_types;
+            const requestTypeLabels = Object.keys(requestTypes);
+            const requestTypeValues = Object.values(requestTypes);
+            
+            requestTypesChart.data.labels = requestTypeLabels;
+            requestTypesChart.data.datasets[0].data = requestTypeValues;
+            requestTypesChart.update();
+            
+            // Update Status Codes Chart
+            const statusCodes = data.status_codes;
+            const statusCodeLabels = Object.keys(statusCodes);
+            const statusCodeValues = Object.values(statusCodes);
+            const statusCodeColors = statusCodeLabels.map(code => {
+                const codeNum = parseInt(code);
+                if (codeNum < 300) return '#2ecc71';  // Green for 2xx
+                if (codeNum < 400) return '#3498db';  // Blue for 3xx
+                if (codeNum < 500) return '#f39c12';  // Orange for 4xx
+                return '#e74c3c';  // Red for 5xx
+            });
+            
+            statusCodesChart.data.labels = statusCodeLabels;
+            statusCodesChart.data.datasets[0].data = statusCodeValues;
+            statusCodesChart.data.datasets[0].backgroundColor = statusCodeColors;
+            statusCodesChart.update();
+        }
+        
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            initCharts();
+            refreshStats();
+            
+            // Set up refresh button
+            document.getElementById('refresh-btn').addEventListener('click', refreshStats);
+            
+            // Auto-refresh every 10 seconds
+            setInterval(refreshStats, 10000);
+        });
+    </script>
+</body>
+</html>
