@@ -1,6 +1,6 @@
 # Modelo de Score de Risco de Crédito - Empréstimos Pessoais
 
-## Descrição
+## Descrição do modelo
 
 Modelo supervisionado para prever a probabilidade de inadimplência em até 90 dias após a concessão de empréstimos pessoais não-garantidos. O objetivo é apoiar decisões de aprovação automática ou assistida, calibrando o risco de carteira.
 
