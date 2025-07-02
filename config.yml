@@ -1,0 +1,9 @@
+teste: 2
+metrics: 2
+quality_gate:
+  - teste: 7
+  - teste: 5
+
+mlflow:
+  experiment_name: my_experiment
+  run_id: myhash231u718
